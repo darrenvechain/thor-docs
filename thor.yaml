@@ -1,0 +1,1623 @@
+openapi: 3.0.3
+info:
+  title: Thorest
+  description: |
+    
+    RESTful API to access VechainThor Network
+    
+    [Project Home](https://github.com/vechain/thor)
+    
+    [Open API Specification](/doc/thor.yaml)
+    
+    [Swagger UI](/doc/swagger-ui)
+    
+    [Stoplight Docs](/doc/api-docs)
+
+  license:
+    name: LGPL 3.0
+    url: https://www.gnu.org/licenses/lgpl-3.0.en.html
+  version: 2.1.0
+servers:
+  - url: https://mainnet.vechain.org/
+    description: Main Net
+  - url: https://testnet.vechain.org/
+    description: Test Net
+tags:
+  - name: Accounts
+    description: |
+      Provides access to on-chain account and contract information.  This includes details about account balances, contract states, and related functionalities.
+  - name: Transactions
+    description: |
+      Manages blockchain transactions, enabling the creation, retrieval, and verification  of transactions on the blockchain.
+  - name: Blocks
+    description: |
+      Retrieves information about on-chain blocks
+  - name: Logs
+    description: |
+      Query on-chain logs stemming from transaction outputs.  This feature empowers users to delve into the intricacies of transaction history,  providing a comprehensive view of on-chain activities.
+  - name: Node
+    description: |
+      Provides information about the node's status
+  - name: Subscriptions
+    description: |
+      Facilitates WebSocket-based interactions with the blockchain, allowing users to subscribe  to real-time events, updates, or notifications related to specific blockchain activities.
+  - name: Debug
+    description: |
+      Offers a set of debugging utilities
+paths:
+  /accounts/{address}:
+    get:
+      parameters:
+        - name: address
+          in: path
+          description: The address of the account/ contract
+          required: true
+          schema:
+            type: string
+            format: hex
+            pattern: '^(0x)?[0-9a-fA-F]{40}$'
+          example: '0x6d95e6dca01d109882fe1726a2fb9865fa41e7aa'
+        - $ref: '#/components/parameters/RevisionInQuery'
+      tags:
+        - Accounts
+      summary: Retrieve account details
+      description: |
+        Retrieve information about an account or a contract identified by its `address`.
+
+        To access historical details, you can specify a `revision` in the query string.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'Invalid address'
+  /accounts/*:
+    post:
+      parameters:
+        - $ref: '#/components/parameters/RevisionInQuery'
+      tags:
+        - Accounts
+      summary: Execute a batch of clauses
+      description: |
+        This endpoint can be used for various purposes:
+        
+          - Read contract state.
+          - Simulate the execution of a transaction. This can be useful to determine if your transaction may revert before submitting it.
+          - Inspect the outputs of a transaction before executing it.
+          - Estimate the gas consumption of a transaction.
+
+        The fields `gasPayer`, `provedWork`, `blockRef` and `expiration` are for built-in contract purposes only. For example, no error is returned if the transaction is technically expired. For more information about built-in contracts, please refer to the vechain documentation.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ExtendedCallData'
+                - $ref: '#/components/schemas/BatchCallData'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchCallResult'
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'Invalid address'
+  /accounts/{address}/code:
+    get:
+      parameters:
+        - name: address
+          in: path
+          description: The address of the account/ contract
+          required: true
+          schema:
+            type: string
+            format: hex
+            pattern: '^(0x)?[0-9a-fA-F]{40}$'
+          example: '0x0000000000000000000000000000456E65726779'
+        - $ref: '#/components/parameters/RevisionInQuery'
+      tags:
+        - Accounts
+      summary: Retrieve a smart contract's bytecode
+      description: |
+        Returns the compiled byte code of a smart contract, if any, at a given address.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Code'
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'Invalid address'
+  /accounts/{address}/storage/{key}:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/AddressInPath'
+        - $ref: '#/components/parameters/StorageKeyInPath'
+        - $ref: '#/components/parameters/RevisionInQuery'
+      tags:
+        - Accounts
+      summary: Retrieve account storage value
+      description: |
+        A method that returns the data stored at a specific storage slot within a smart contract. It can help developers to read a smart contract's internal state, like user data or balances, to inform decisions and build more advanced applications that interact with smart contracts on the blockchain
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Storage'
+  /transactions/{id}:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/TxIDInPath'
+        - $ref: '#/components/parameters/RawInQuery'
+        - $ref: '#/components/parameters/HeadInQuery'
+        - $ref: '#/components/parameters/PendingInQuery'
+      tags:
+        - Transactions
+      summary: Retrieve transaction
+      description: |
+        by ID. When `pending` is true, a pending tx with null `meta` might be returned.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: '#/components/schemas/Tx'
+                    properties:
+                      meta:
+                        required: false
+                        $ref: '#/components/schemas/TxMeta'
+                  - allOf:
+                      - $ref: '#/components/schemas/RawTx'
+                    properties:
+                      meta:
+                        required: false
+                        $ref: '#/components/schemas/TxMeta'
+                    description: raw transaction
+                example:
+                  id: '0x4de71f2d588aa8a1ea00fe8312d92966da424d9939a511fc0be81e65fad52af8'
+                  chainTag: 1
+                  blockRef: '0x00000001511fc0be'
+                  expiration: 30
+                  clauses: []
+                  gasPriceCoef: 128
+                  gas: 21000
+                  origin: '0x7567d83b7b8d80addcb281a71d54fc7b3364ffed'
+                  delegator: null
+                  nonce: '0xd92966da424d9939'
+                  dependsOn: null
+                  size: 180
+                  meta:
+                    blockID: '0x00000001c458949985a6d86b7139690b8811dd3b4647c02d4f41cdefb7d32327'
+                    blockNumber: 1
+                    blockTimestamp: 1523156271
+  /transactions/{id}/receipt:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/TxIDInPath'
+        - $ref: '#/components/parameters/HeadInQuery'
+      tags:
+        - Transactions
+      summary: Retrieve transaction receipt
+      description: |
+        by ID.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Receipt'
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/ReceiptMeta'
+  /transactions:
+    post:
+      tags:
+        - Transactions
+      summary: Commit transaction
+      description: |
+        in raw.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RawTx'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TXID'
+  /blocks/{revision}:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/RevisionInPath'
+        - $ref: '#/components/parameters/ExpandedInQuery'
+      tags:
+        - Blocks
+      summary: Retrieve block
+      description: |
+        by ID or number, or 'best' for latest block or 'finalized' for finalized block. If `expanded` query option is true, all transactions along with
+        their receipts will be embedded under `transactions` field instead of ids.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: '#/components/schemas/Block'
+                      - $ref: '#/components/schemas/IsTrunk'
+                      - $ref: '#/components/schemas/IsFinalized'
+                    properties:
+                      transactions:
+                        description: transaction IDs
+                        type: array
+                        items:
+                          type: string
+                          example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+                  - allOf:
+                      - $ref: '#/components/schemas/Block'
+                      - $ref: '#/components/schemas/IsTrunk'
+                      - $ref: '#/components/schemas/IsFinalized'
+                    properties:
+                      transactions:
+                        description: embedded transactions along with their receipts
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Tx'
+                            - $ref: '#/components/schemas/Receipt'
+                    description: expanded block
+              example:
+                number: 325324
+                id: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
+                size: 373
+                parentID: '0x0004f6cb730dbd90fed09d165bfdf33cc0eed47ec068938f6ee7b7c12a4ea98d'
+                timestamp: 1533267900
+                gasLimit: 11253579
+                beneficiary: '0xb4094c25f86d628fdd571afc4077f0d0196afb48'
+                gasUsed: 21000
+                totalScore: 1029988
+                txsRoot: '0x89dfd9fcd10c9e53d68592cf8b540b280b72d381b868523223992f3e09a806bb'
+                txsFeatures: 0
+                stateRoot: '0x86bcc6d214bc9d8d0dedba1012a63c8317d19ce97f60c8a2ef5c59bbd40d4261'
+                receiptsRoot: '0x15787e2533c470e8a688e6cd17a1ee12d8457778d5f82d2c109e2d6226d8e54e'
+                com: true
+                signer: '0xab7b27fc9e7d29f9f2e5bd361747a5515d0cc2d1'
+                isTrunk: true
+                isFinalized: false
+                transactions:
+                  - '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+  /logs/event:
+    post:
+      tags:
+        - Logs
+      summary: Filter event logs
+      description: |
+        Event logs are produced by `OP_LOG` in EVM.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventFilter'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/Event'
+                  properties:
+                    meta:
+                      $ref: '#/components/schemas/LogMeta'
+  /logs/transfer:
+    post:
+      tags:
+        - Logs
+      summary: Filter transfer logs
+      description: |
+        Transfer logs are recorded on VET transferring.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferFilter'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/Transfer'
+                  properties:
+                    meta:
+                      $ref: '#/components/schemas/LogMeta'
+  /node/network/peers:
+    get:
+      tags:
+        - Node
+      summary: Retrieve connected peers
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PeerStats'
+  /subscriptions/block:
+    get:
+      tags:
+        - Subscriptions
+      summary: (Websocket) Subscribe new blocks
+      parameters:
+        - $ref: '#/components/parameters/PositionInQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Block'
+                  - $ref: '#/components/schemas/Obsolete'
+                properties:
+                  transactions:
+                    description: transaction IDs
+                    type: array
+                    items:
+                      type: string
+                      example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+  /subscriptions/event:
+    get:
+      tags:
+        - Subscriptions
+      summary: (Websocket) Subscribe new events
+      description: |
+        which satisfy criteria in query.
+      parameters:
+        - $ref: '#/components/parameters/PositionInQuery'
+        - name: addr
+          in: query
+          schema:
+            type: string
+          description: address of event emitter
+        - name: t0
+          in: query
+          schema:
+            type: string
+          description: topic0 of event
+        - name: t1
+          in: query
+          schema:
+            type: string
+          description: topic1 of event
+        - name: t2
+          in: query
+          schema:
+            type: string
+          description: topic2 of event
+        - name: t3
+          in: query
+          schema:
+            type: string
+          description: topic3 of event
+        - name: t4
+          in: query
+          schema:
+            type: string
+          description: topic4 of event
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Event'
+                  - $ref: '#/components/schemas/Obsolete'
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/LogMeta'
+  /subscriptions/transfer:
+    get:
+      tags:
+        - Subscriptions
+      summary: (Websocket) Subscribe new transfers
+      description: |
+        which satisfy criteria in query.
+      parameters:
+        - $ref: '#/components/parameters/PositionInQuery'
+        - name: txOrigin
+          in: query
+          schema:
+            type: string
+          description: signer address of tx which contains the transfer
+        - name: sender
+          in: query
+          schema:
+            type: string
+          description: address of token sender
+        - name: recipient
+          in: query
+          schema:
+            type: string
+          description: address of token recipient
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Transfer'
+                  - $ref: '#/components/schemas/Obsolete'
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/LogMeta'
+  /subscriptions/beat:
+    get:
+      tags:
+        - Subscriptions
+      summary: (Websocket) Subscribe block chain's beats
+      deprecated: true
+      description: |
+        which contain summary of new blocks, and bloom filters that composited with affected addresses.
+      parameters:
+        - $ref: '#/components/parameters/PositionInQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Beat'
+                  - $ref: '#/components/schemas/Obsolete'
+  /subscriptions/beat2:
+    get:
+      tags:
+        - Subscriptions
+      summary: (Websocket) Subscribe block chain's beats
+      description: |
+        which contain summary of new blocks, and bloom filters that composited with affected addresses.
+      parameters:
+        - $ref: '#/components/parameters/PositionInQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Beat2'
+                  - $ref: '#/components/schemas/Obsolete'
+  /subscritpions/txpool:
+    get:
+      tags:
+        - Subscriptions
+      summary: (Websocket) Subscribe to new transactions
+      description: |
+        which is in pending state.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TXID'
+  /debug/tracers:
+    post:
+      tags:
+        - Debug
+      summary: Create a tracer
+      description: for a clause
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ClauseTracerOption'
+                - $ref: '#/components/schemas/TracerOption'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /debug/tracers/call:
+    post:
+      tags:
+        - Debug
+      summary: Create a tracer
+      description: for evaluating a method call
+      parameters:
+        - $ref: '#/components/parameters/HeadInQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TracerOption'
+                - $ref: '#/components/schemas/CallData'
+                - $ref: '#/components/schemas/ExtendedCallData'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /debug/storage-range:
+    post:
+      tags:
+        - Debug
+      summary: Retrieve storage range
+      description: |
+        of the account with given address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorageRangeOption'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageRange'
+components:
+  schemas:
+    Account:
+      properties:
+        balance:
+          type: string
+          description: Balance in WEI, presented as a hexadecimal string.
+          example: '0x47ff1f90327aa0f8e'
+        energy:
+          type: string
+          description: Energy in WEI, presented as a hexadecimal string.
+          example: '0xcf624158d591398'
+        hasCode:
+          type: boolean
+          description: Indicates whether the account is a contract (true) or not (false)
+          example: false
+    Code:
+      properties:
+        code:
+          type: string
+          description: |
+            The bytecode of the contract address. If the address is not a contract, the value will be '0x'.
+          example: '0x6060604052600080fd00a165627a7a72305820c23d3ae2dc86ad130561a2829d87c7cb8435365492bd1548eb7e7fc0f3632be90029'
+    Storage:
+      properties:
+        value:
+          type: string
+          description: |
+            The storage value associated with the contract. 
+            This is represented as a hexadecimal string.
+          example: '0x0000000000000000000000000000000000000000000000000000000000000001'
+    TxMeta:
+      description: Transaction meta information
+      properties:
+        blockID:
+          type: string
+          description: |
+            Block identifier (bytes32) associated with the transaction.
+          example: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
+        blockNumber:
+          type: integer
+          format: uint32
+          description: The block number (height) where the transaction is included.
+          example: 325324
+        blockTimestamp:
+          type: integer
+          format: uint64
+          description: The Unix timestamp of the block containing the transaction.
+          example: 1533267900
+    ReceiptMeta:
+      description: Transaction receipt meta information
+      properties:
+        blockID:
+          type: string
+          description: |
+            Block identifier (bytes32) associated with the transaction receipt.
+          example: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
+        blockNumber:
+          type: integer
+          format: uint32
+          description: The block number (height) where the transaction is included.
+          example: 325324
+        blockTimestamp:
+          type: integer
+          format: uint64
+          description: The Unix timestamp of the block containing the transaction receipt.
+          example: 1533267900
+        txID:
+          type: string
+          description: The identifier of the associated transaction.
+          example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+        txOrigin:
+          type: string
+          description: The transaction origin (signer).
+          example: '0xdb4027477b2a8fe4c83c6dafe7f86678bb1b8a8d'
+    LogMeta:
+      description: Event or transfer log metadata
+      properties:
+        blockID:
+          type: string
+          description: |
+            Block identifier (bytes32) associated with the log entry.
+          example: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
+        blockNumber:
+          type: integer
+          format: uint32
+          description: The block number (height) where the log entry is included.
+          example: 325324
+        blockTimestamp:
+          type: integer
+          format: uint64
+          description: The Unix timestamp of the block containing the log entry.
+          example: 1533267900
+        txID:
+          type: string
+          description: The identifier of the associated transaction.
+          example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+        txOrigin:
+          type: string
+          description: The transaction origin (signer).
+          example: '0xdb4027477b2a8fe4c83c6dafe7f86678bb1b8a8d'
+        clauseIndex:
+          type: integer
+          format: uint32
+          description: The index of the clause that generates this log.
+          example: 0
+    Block:
+      properties:
+        number:
+          type: integer
+          format: uint32
+          description: The block number or height in the blockchain.
+          example: 325324
+        id:
+          type: string
+          format: bytes32
+          description: The unique identifier of the block.
+          example: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
+        size:
+          type: integer
+          format: uint32
+          description: The size of the block in bytes, encoded in RLP (Recursive Length Prefix).
+          example: 373
+        parentID:
+          type: string
+          format: bytes32
+          description: The identifier of the parent block.
+          example: '0x0004f6cb730dbd90fed09d165bfdf33cc0eed47ec068938f6ee7b7c12a4ea98d'
+        timestamp:
+          type: integer
+          format: uint64
+          description: The Unix timestamp when the block was created.
+          example: 1533267900
+        gasLimit:
+          type: integer
+          format: uint64
+          description: The maximum allowed accumulative gas usage of transactions in the block.
+          example: 11253579
+        beneficiary:
+          type: string
+          format: bytes32
+          description: The address of the account that receives the block reward.
+          example: '0xb4094c25f86d628fdd571afc4077f0d0196afb48'
+        gasUsed:
+          type: integer
+          format: uint64
+          description: The total gas used by all transactions in the block.
+          example: 21000
+        totalScore:
+          type: integer
+          format: uint64
+          description: The sum of scores from all ancestral blocks.
+          example: 1029988
+        txsRoot:
+          type: string
+          format: bytes32
+          description: The root hash of transactions in the block.
+          example: '0x89dfd9fcd10c9e53d68592cf8b540b280b72d381b868523223992f3e09a806bb'
+        txsFeatures:
+          type: integer
+          format: uint32
+          description: A bitset indicating supported transaction features.
+          example: 0
+        stateRoot:
+          type: string
+          format: bytes32
+          description: The root hash of the accounts state in the block.
+          example: '0x86bcc6d214bc9d8d0dedba1012a63c8317d19ce97f60c8a2ef5c59bbd40d4261'
+        receiptsRoot:
+          type: string
+          format: bytes32
+          description: The root hash of transaction receipts in the block.
+          example: '0x15787e2533c470e8a688e6cd17a1ee12d8457778d5f82d2c109e2d6226d8e54e'
+        com:
+          type: boolean
+          description: Indicates whether the block signer voted COM (Commit) in BFT (Byzantine Fault Tolerance).
+        signer:
+          type: string
+          format: bytes20
+          description: The address of the entity that signed the block.
+          example: '0xab7b27fc9e7d29f9f2e5bd361747a5515d0cc2d1'
+    Clause:
+      properties:
+        to:
+          type: string
+          description: |
+            The recipient of the clause. Null indicates contract deployment (bytes32).
+          example: '0x5034aa590125b64023a0262112b98d72e3c8e40e'
+        value:
+          type: string
+          description: |
+            The hexadecimal representation of the token to be transferred.
+          example: '0x47fdb3c3f456c0000'
+        data:
+          type: string
+          description: |
+            The input data for the clause (in bytes).
+          example: '0x'
+    Tx:
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the transaction.
+          example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+        origin:
+          type: string
+          description: The entity that signed the transaction.
+          example: '0xdb4027477b2a8fe4c83c6dafe7f86678bb1b8a8d'
+        delegator:
+          type: string
+          description: The delegator who paid the gas fee (null if not applicable).
+          example: null
+        size:
+          type: integer
+          format: uint32
+          description: The byte size of the transaction, RLP encoded.
+          example: 130
+        chainTag:
+          type: integer
+          format: uint8
+          description: The last byte of the genesis block ID.
+          example: 39
+        blockRef:
+          type: string
+          description: The 8-byte prefix of some block ID.
+          example: '0x0004f6cb730dbd90'
+        expiration:
+          type: integer
+          format: uint32
+          description: The expiration relative to blockRef, in unit blocks.
+          example: 720
+        clauses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Clause'
+        gasPriceCoef:
+          type: integer
+          format: uint8
+          description: The coefficient used to calculate the final gas price.
+          example: 0
+        gas:
+          type: integer
+          format: uint64
+          description: The maximum amount of gas that can be consumed to execute this transaction.
+          example: 21000
+        dependsOn:
+          type: string
+          format: bytes32
+          description: The ID of the transaction on which the current transaction depends. Can be null.
+          example: null
+        nonce:
+          type: string
+          example: '0x29c257e36ea6e72a'
+
+    RawTx:
+      properties:
+        raw:
+          type: string
+          description: |
+            The hexadecimal representation of the encoded transaction.
+          example: '0xf86981ba800adad994000000000000000000000000000000000000746f82271080018252088001c0b8414792c9439594098323900e6470742cd877ec9f9906bca05510e421f3b013ed221324e77ca10d3466b32b1800c72e12719b213f1d4c370305399dd27af962626400'
+
+    Event:
+      properties:
+        address:
+          type: string
+          description: |
+            The address of the contract that produces the event (bytes20).
+          example: '0x7567d83b7b8d80addcb281a71d54fc7b3364ffed'
+        topics:
+          type: array
+          items:
+            type: string
+            description: |
+              An array of topics associated with the event.
+            example: '0x4de71f2d588aa8a1ea00fe8312d92966da424d9939a511fc0be81e65fad52af8'
+        data:
+          type: string
+          description: |
+            The data associated with the event.
+          example: '0x4de71f2d588aa8a1ea00fe8312d92966da424d9939a511fc0be81e65fad52af8'
+
+    Transfer:
+      properties:
+        sender:
+          type: string
+          description: |
+            The address sent the tokens.
+          example: '0xdb4027477b2a8fe4c83c6dafe7f86678bb1b8a8d'
+        recipient:
+          type: string
+          description: |
+            The address that received tokens.
+          example: '0x5034aa590125b64023a0262112b98d72e3c8e40e'
+        amount:
+          type: string
+          description: |
+            The amount of tokens transferred.
+          example: '0x47fdb3c3f456c0000'
+    Receipt:
+      properties:
+        gasUsed:
+          type: integer
+          format: uint64
+          description: |
+            The total gas used by the transaction.
+          example: 21000
+        gasPayer:
+          type: string
+          description: |
+            The address of the account that paid for the used gas.
+          example: '0xdb4027477b2a8fe4c83c6dafe7f86678bb1b8a8d'
+        paid:
+          type: string
+          description: |
+            The hexadecimal representation of the amount of paid energy.
+          example: '0x1236efcbcbb340000'
+        reward:
+          type: string
+          description: |
+            The hexadecimal representation of the amount of reward.
+          example: '0x576e189f04f60000'
+        reverted:
+          type: boolean
+          description: |
+            Indicates whether the transaction was reverted (true means reverted).
+          example: false
+        outputs:
+          type: array
+          items:
+            properties:
+              contractAddress:
+                type: string
+                description: |
+                  The deployed contract address if the corresponding clause is a
+                  contract deployment clause (null otherwise).
+                example: null
+              events:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+              transfers:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transfer'
+
+    DebugTracerData:
+      allOf:
+        - $ref: '#/components/schemas/CallData'
+        - $ref: '#/components/schemas/ExtendedCallData'
+        - $ref: '#/components/schemas/TracerOption'
+      example:
+        value: '0xde0b6b3a7640000'
+        data: '0x5665436861696e2054686f72'
+        gasPrice: '1000000000000000'
+        caller: '0x7567d83b7b8d80addcb281a71d54fc7b3364ffed'
+        provedWork: '1000'
+        gasPayer: '0xd3ae78222beadb038203be21ed5ce7c9b1bff602'
+        expiration: 1000
+        blockRef: '0x00000000851caf3c'
+
+    CallData:
+      properties:
+        value:
+          type: string
+          description: |
+            The amount of token to be transferred.
+        data:
+          type: string
+          description: |
+            The input data for the contract call.
+        gas:
+          type: integer
+          format: uint64
+          description: |
+            The maximum allowed gas for execution.
+        gasPrice:
+          type: string
+          description: |
+            The absolute gas price.
+        caller:
+          type: string
+          description: |
+            The caller's address (msg.sender).
+      example:
+        value: '0xde0b6b3a7640000'
+        data: '0x5665436861696e2054686f72'
+        gas: 50000
+        gasPrice: '1000000000000000'
+        caller: '0x7567d83b7b8d80addcb281a71d54fc7b3364ffed'
+
+    ExtendedCallData:
+      properties:
+        provedWork:
+          type: string
+          description: |
+            The transaction's proved work (for extension contract).
+        gasPayer:
+          type: string
+          description: |
+            The address of the gas payer (for extension contract).
+        expiration:
+          type: integer
+          format: uint32
+          description: |
+            The transaction expiration (for extension contract).
+        blockRef:
+          type: string
+          description: |
+            The block reference (for extension contract).
+      example:
+        provedWork: '1000'
+        gasPayer: '0xd3ae78222beadb038203be21ed5ce7c9b1bff602'
+        expiration: 1000
+        blockRef: '0x00000000851caf3c'
+
+    CallResult:
+      properties:
+        data:
+          type: string
+          description: |
+            The output data produced by the contract execution.
+          example: '0x103556a73c10e38ffe2fc4aa50fc9d46ad0148f07e26417e117bd1ece9d948b5'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+          description: |
+            An array of events generated during contract execution.
+        transfers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transfer'
+          description: |
+            An array of transfers that occurred during contract execution.
+        gasUsed:
+          type: integer
+          format: uint64
+          description: |
+            The amount of gas used during execution.
+          example: 21000
+        reverted:
+          type: boolean
+          description: |
+            Indicates whether the transaction was reverted (true means reverted).
+          example: false
+        vmError:
+          type: string
+          description: |
+            The virtual machine error message if the execution encountered an error.
+          example: ''
+
+    BatchCallData:
+      properties:
+        clauses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Clause'
+          description: |
+            An array of clauses to be executed.
+        gas:
+          type: integer
+          format: uint64
+          description: |
+            The maximum allowed gas for the execution of the batch call.
+        gasPrice:
+          type: string
+          description: |
+            The absolute gas price for the batch call.
+        caller:
+          type: string
+          description: |
+            The caller's address (msg.sender) for the batch call.
+      example:
+        clauses:
+          - to: '0x0000000000000000000000000000456E65726779'
+            value: '0x0'
+            data: '0xa9059cbb0000000000000000000000000f872421dc479f3c11edd89512731814d0598db50000000000000000000000000000000000000000000000013f306a2409fc0000'
+          - to: '0xf077b491b355E64048cE21E3A6Fc4751eEeA77fa'
+            value: '0x6124fee993bc00000'
+            data: '0x'
+          - to: null
+            value: '0x0'
+            data: '0x6080604052348015600f57600080fd5b50609f8061001e6000396000f300608060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680631820cabb146044575b600080fd5b348015604f57600080fd5b506056606c565b6040518082815260200191505060405180910390f35b62015180815600a165627a7a723058200ac7475da248e2fc26c057319e296e90c24d5f8b9bf956fb3b77545642cad3b10029'
+        gas: 50000
+        gasPrice: '1000000000000000'
+        caller: '0x6d95e6dca01d109882fe1726a2fb9865fa41e7aa'
+
+    BatchCallResult:
+      type: array
+      items:
+        $ref: '#/components/schemas/CallResult'
+
+    FilterOptions:
+      properties:
+        offset:
+          type: integer
+          example: 0
+          description: |
+            The offset in the matched record set for paginated results.
+        limit:
+          type: integer
+          example: 10
+          description: |
+            The limit of records to be included in the output for paginated results.
+      example:
+        offset: 0
+        limit: 10
+      description: |
+        Use these parameters to request paginated and filtered results. For example:
+        ```
+        {
+          "options": {
+            "offset": 0,
+            "limit": 10
+          }
+        }
+        ```
+        This indicates a page offset of 0 and a page size of 10.
+        Pass options as `null` if you do not require demand paging.
+
+    FilterRange:
+      properties:
+        unit:
+          type: string
+          enum:
+            - block
+            - time
+          example: block
+          description: |
+            Defines the unit of `from` and `to`.
+            Use `block` for block number and `time` for block timestamp (default is `block`).
+        from:
+          type: integer
+          format: uint64
+          example: 0
+          description: |
+            The starting value of the range.
+        to:
+          type: integer
+          format: uint64
+          example: 100000
+          description: |
+            The ending value of the range.
+      description: |
+        Defines the range to filter in. For example:
+        ```
+        {
+            "range": {
+                "unit": "block",
+                "from": 10,
+                "to": 1000
+            }
+        }
+        ```
+        refers to the range from block 10 to block 1000.
+        Use `null` for any parameter to indicate the full range.
+
+    EventCriteria:
+      properties:
+        address:
+          type: string
+          description: |
+            The address of the event emitter.
+        topic0:
+          type: string
+          description: |
+            The first topic to filter events. Null if not needed.
+        topic1:
+          type: string
+          description: |
+            The second topic to filter events. Null if not needed.
+        topic2:
+          type: string
+          description: |
+            The third topic to filter events. Null if not needed.
+        topic3:
+          type: string
+          description: |
+            The fourth topic to filter events. Null if not needed.
+        topic4:
+          type: string
+          description: |
+            The fifth topic to filter events. Null if not needed.
+      description: |
+        Criteria to filter events. All fields are joined with the `and` operator.
+        Null fields are ignored. For example:
+        ```
+        {
+          "address": "0x0000000000000000000000000000456E65726779",
+          "topic0": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+        }
+        ```
+        Matches events emitted by `0x0000000000000000000000000000456E65726779`
+        with `topic0` equal to `0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`.
+      example:
+        address: '0x0000000000000000000000000000456E65726779'
+        topic0: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+        topic1: '0x0000000000000000000000005034aa590125b64023a0262112b98d72e3c8e40e'
+
+    EventFilter:
+      properties:
+        range:
+          $ref: '#/components/schemas/FilterRange'
+        options:
+          $ref: '#/components/schemas/FilterOptions'
+        criteriaSet:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventCriteria'
+          description: |
+            Sets of criteria to filter events. Multiple criteria are combined with `and` operator.
+        order:
+          type: string
+          enum:
+            - asc
+            - desc
+          description: |
+            Specifies the order of filters. Defaults to `asc`.
+      example:
+        range:
+          unit: block
+          from: 10
+          to: 1000
+        options:
+          offset: 0
+          limit: 10
+        criteriaSet:
+          - address: '0x0000000000000000000000000000456E65726779'
+            topic0: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+          - address: '0x0000000000000000000000005034aa590125b64023a0262112b98d72e3c8e40e'
+            topic1: '0x000000000000000000000000abcdef1234567890'
+        order: asc
+      description: |
+        Specifies criteria and options to filter and order events.
+        Use `range` to define a specific block or time range, `options` for pagination,
+        `criteriaSet` for event-specific criteria, and `order` to set the order of results.
+
+    TransferCriteria:
+      properties:
+        txOrigin:
+          type: string
+          example: '0xe59d475abe695c7f67a8a2321f33a856b0b4c71d'
+          description: |
+            The transaction origin associated with the transfer.
+        sender:
+          type: string
+          example: '0xe59d475abe695c7f67a8a2321f33a856b0b4c71d'
+          description: |
+            The address that sends the tokens in the transfer.
+        recipient:
+          type: string
+          example: '0x7567d83b7b8d80addcb281a71d54fc7b3364ffed'
+          description: |
+            The address that receives the tokens in the transfer.
+      description: |
+        Criteria to filter transfers. All fields are optional.
+        Use `txOrigin` to filter by transaction origin, `sender` for the sender's address,
+        and `recipient` for the recipient's address.
+
+    TransferFilter:
+      properties:
+        range:
+          $ref: '#/components/schemas/FilterRange'
+        options:
+          $ref: '#/components/schemas/FilterOptions'
+        criteriaSet:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferCriteria'
+          description: |
+            Sets of criteria to filter transfers. Multiple criteria are combined with `and` operator.
+        order:
+          type: string
+          enum:
+            - asc
+            - desc
+          description: |
+            Specifies the order of filters. Defaults to `asc`.
+      example:
+        range:
+          unit: block
+          from: 10
+          to: 1000
+        options:
+          offset: 0
+          limit: 10
+        criteriaSet:
+          - txOrigin: '0xe59d475abe695c7f67a8a2321f33a856b0b4c71d'
+          - sender: '0xe59d475abe695c7f67a8a2321f33a856b0b4c71d'
+          - recipient: '0x7567d83b7b8d80addcb281a71d54fc7b3364ffed'
+        order: asc
+      description: |
+        Specifies criteria and options to filter and order transfers.
+        Use `range` to define a specific block or time range, `options` for pagination,
+        `criteriaSet` for transfer-specific criteria, and `order` to set the order of results.
+
+    PeerStats:
+      properties:
+        name:
+          type: string
+          example: 'thor/v1.0.0-6680b98-dev/linux/go1.10.3'
+          description: |
+            The name and version of the peer software along with platform details.
+        bestBlockID:
+          type: string
+          example: '0x000087b3a4d4cdf1cc52d56b9704f4c18f020e1b48dbbf4a23d1ee4f1fa5ff94'
+          description: |
+            The block identifier of the best block known to the peer.
+        totalScore:
+          type: integer
+          example: 68497
+          description: |
+            The cumulative score of the peer based on various factors.
+        peerID:
+          type: string
+          example: '50e122a505ee55b84331068acfd857e37ad58f463a0fab9aaff2c1e4b2e2d22ae71dc14fdaf6eead74bd3f60594644aa35c588f9ca6be3341e2ce18ddc413321'
+          description: |
+            The unique identifier of the peer in the network.
+        netAddr:
+          type: string
+          example: '128.1.39.120:11235'
+          description: |
+            The network address (IP:Port) of the peer.
+        inbound:
+          type: boolean
+          example: false
+          description: |
+            Indicates whether the connection is inbound (`true`) or outbound (`false`).
+        duration:
+          type: integer
+          example: 28
+          description: |
+            The duration of the connection with the peer in seconds.
+      description: |
+        Provides statistical information about a network peer, including software details,
+        block information, score, unique identifier, network address, connection direction,
+        and connection duration.
+
+    TXID:
+      properties:
+        id:
+          type: string
+          description: |
+            The unique identifier of the transaction.
+      example:
+        id: '0x4de71f2d588aa8a1ea00fe8312d92966da424d9939a511fc0be81e65fad52af8'
+      description: |
+        Represents the transaction identifier, a unique string used to identify a transaction.
+
+    Obsolete:
+      properties:
+        obsolete:
+          type: boolean
+      description: |
+        Represents the obsolescence status, indicating whether the block containing this data has become a branch block in the blockchain.
+
+    ClauseTracerOption:
+      properties:
+        target:
+          type: string
+          description: |
+            The unified path of the target to be traced. Currently, only the clause is supported.
+            Format: `blockID/(txIndex|txId)/clauseIndex`.
+          example: 0x000dabb4d6f0a80ad7ad7cd0e07a1f20b546db0730d869d5ccb0dd2a16e7595b/0/0
+      description: |
+        Represents options for tracing a specific target, with the current support limited to tracing clauses.
+
+    TracerOption:
+      properties:
+        name:
+          type: string
+          enum:
+            - ''
+            - 4byte
+            - call
+            - noop
+            - prestate
+            - unigram
+            - bigram
+            - trigram
+            - evmdis
+            - opcount
+          description: |
+            Name of the tracer. An empty name stands for the default struct logger tracer.
+            Choose from a predefined set of tracer names.
+          example: ''
+        config:
+          type: object
+          description: |
+            Configuration specific to the chosen tracer. The structure of the configuration object is determined by the specific tracer selected.
+      description: |
+        Represents options for a tracer, including the name of the tracer and its configuration.
+        An empty name stands for the default struct logger tracer. The `config` property holds tracer-specific configuration details.
+
+    StorageRangeOption:
+      properties:
+        address:
+          type: string
+          description: |
+            The address of the target account.
+          example: '0xa4627036e2095eb71c2341054daa63577c062498'
+        keyStart:
+          type: string
+          example: '0x0000000000000000000000000000000000000000000000000000000000000000'
+          description: |
+            The starting key to define the beginning of the storage range.
+        maxResult:
+          type: number
+          example: 10
+          description: |
+            The maximum number of results to be retrieved.
+        target:
+          type: string
+          example: 0x000edefb448685f9c72fc2b946980ef51d8d208bbaa4d3fdcf0c57d4847aca2e/0/0
+          description: |
+            The target clause path in the format `blockID/(txIndex|txId)/clauseIndex`.
+      description: |
+        Represents options for querying storage data within a specified range.
+        Includes the target account address, the starting key for the storage range,
+        the maximum number of results to retrieve, and the target clause path.
+
+    StorageRange:
+      properties:
+        nextKey:
+          type: string
+          example: null
+          description: |
+            The next key in the storage range. If null, it indicates the end of the range.
+        storage:
+          type: object
+          example:
+            '0x33e423980c9b37d048bd5fadbd4a2aeb95146922045405accc2f468d0ef96988':
+              key: '0x0000000000000000000000000000000000000000000000000000000000000001'
+              value: '0x00000000000000000000000000000000000000000000000000000000000000c8'
+          description: |
+            A collection of storage entries within the specified range. Each entry
+            consists of a key-value pair, where the key is the storage key and the value
+            is the corresponding storage value.
+
+    Beat:
+      properties:
+        number:
+          type: integer
+          format: uint32
+          description: |
+            The block number (height) of the beat.
+          example: 325324
+        id:
+          type: string
+          format: bytes32
+          description: |
+            The unique identifier (block hash) of the beat.
+          example: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
+        parentID:
+          type: string
+          format: bytes32
+          description: |
+            The identifier (block hash) of the parent block.
+          example: '0x0004f6cb730dbd90fed09d165bfdf33cc0eed47ec068938f6ee7b7c12a4ea98d'
+        timestamp:
+          type: integer
+          format: uint64
+          description: |
+            The Unix timestamp of the block in the beat.
+          example: 1533267900
+        txsFeatures:
+          type: integer
+          format: uint32
+          description: |
+            The bitset indicating supported transaction features in the block.
+          example: 0
+        bloom:
+          type: string
+          format: hex
+          description: |
+            The bloom filter composed of affected addresses.
+          example: '0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+        k:
+          type: integer
+          format: uint32
+          description: |
+            The number of hash functions used for the bloom filter.
+          example: 3
+
+    Beat2:
+      allOf:
+        - $ref: '#/components/schemas/Beat'
+      properties:
+        gasLimit:
+          type: integer
+          format: uint64
+          description: |
+            The block gas limit (maximum allowed accumulative gas usage of transactions).
+          example: 12000000
+
+    IsTrunk:
+      properties:
+        isTrunk:
+          type: boolean
+          description: |
+            Indicates whether the block is on the trunk.
+
+    IsFinalized:
+      properties:
+        isFinalized:
+          type: boolean
+          description: |
+            Indicates whether the block is finalized.
+
+  parameters:
+    AddressInPath:
+      name: address
+      in: path
+      description: The address of the account/ contract
+      required: true
+      schema:
+        type: string
+        format: hex
+        pattern: '^(0x)?[0-9a-fA-F]{40}$'
+      example: '0x5034aa590125b64023a0262112b98d72e3c8e40e'
+    RawInQuery:
+      name: raw
+      in: query
+      description: Specify whether to retrieve a raw transaction.
+      required: false
+      schema:
+        type: boolean
+    RevisionInQuery:
+      name: revision
+      in: query
+      description: Specify either a block number or ID. If omitted, the best block is assumed.
+      schema:
+        type: string
+        format: hex
+        pattern: '^(0x)?([0-9a-fA-F]{64}|[0-9]+)$'
+    RevisionInPath:
+      name: revision
+      in: path
+      description: |
+        Block ID or number. Use 'best' for the latest block or 'finalized' for the finalized block.
+      required: true
+      schema:
+        type: string
+      example: best
+    HeadInQuery:
+      name: head
+      in: query
+      description: Specify the ID of the head block. If omitted, the best block is assumed.
+      schema:
+        type: string
+    StorageKeyInPath:
+      in: path
+      description: The key (position) to access the account storage.
+      required: true
+      name: key
+      schema:
+        type: string
+      example: '0x0000000000000000000000000000000000000000000000000000000000000001'
+    FilterAddressInQuery:
+      name: address
+      in: query
+      description: The address of the account that emits the events.
+      required: false
+      schema:
+        type: string
+      example: '0x0000000000000000000000000000456e65726779'
+    FilterOrderInQuery:
+      name: order
+      in: query
+      description: |
+        The order of filters, defaults to `asc`.
+      required: false
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+      example: asc
+    TxIDInPath:
+      in: path
+      description: The ID of the transaction.
+      required: true
+      name: id
+      schema:
+        type: string
+      example: '0x9bcc6526a76ae560244f698805cc001977246cb92c2b4f1e2b7a204e445409ea'
+    PositionInQuery:
+      name: pos
+      in: query
+      description: |
+        A saved block ID for resuming the subscription. The best block ID is assumed if omitted.
+      schema:
+        type: string
+    ExpandedInQuery:
+      name: expanded
+      in: query
+      required: false
+      description: |
+        Specify whether the returned block is expanded.
+      schema:
+        type: boolean
+    PendingInQuery:
+      name: pending
+      in: query
+      required: false
+      description: |
+        Specify whether to return the transaction even if it's pending.
+      schema:
+        type: boolean
