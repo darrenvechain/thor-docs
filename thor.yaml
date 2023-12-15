@@ -153,7 +153,7 @@ paths:
         - $ref: '#/components/parameters/PendingInQuery'
       tags:
         - Transactions
-      summary: Retrieve Transaction by ID
+      summary: Retrieve a transaction by ID
       description: |
         This endpoint allows you to retrieve a transaction identified by its ID. If the `pending` parameter is set to true, the response may include a pending transaction with a null `meta` field. Use this option when you want to retrieve both confirmed and pending transactions, providing flexibility in accessing real-time transaction data.
 
