@@ -279,10 +279,11 @@ paths:
         - $ref: '#/components/parameters/ExpandedInQuery'
       tags:
         - Blocks
-      summary: Retrieve block
+      summary: Retrieve a block
       description: |
-        by ID or number, or 'best' for latest block or 'finalized' for finalized block. If `expanded` query option is true, all transactions along with
-        their receipts will be embedded under `transactions` field instead of ids.
+        
+        Retrieve information about a block identified by its `revision`.
+
       responses:
         '200':
           description: OK
@@ -481,7 +482,6 @@ paths:
                 properties:
                   meta:
                     $ref: '#/components/schemas/LogMeta'
-
 
   /subscriptions/transfer:
     get:
@@ -895,20 +895,21 @@ components:
         stateRoot:
           type: string
           format: bytes32
-          description: root hash of accounts state
+          description: The root hash for the global state after applying changes in this block
           example: '0x86bcc6d214bc9d8d0dedba1012a63c8317d19ce97f60c8a2ef5c59bbd40d4261'
         receiptsRoot:
           type: string
           format: bytes32
-          description: root hash of transaction receipts
+          description: The hash of the transaction receipts trie
           example: '0x15787e2533c470e8a688e6cd17a1ee12d8457778d5f82d2c109e2d6226d8e54e'
         com:
           type: boolean
-          description: whether the block signer voted COM(Commit) in BFT
+          description: Whether the block signer voted COM(Commit) in BFT
+          example: true
         signer:
           type: string
           format: bytes20
-          description: the one who signed this block
+          description: The address of the block signer
           example: '0xab7b27fc9e7d29f9f2e5bd361747a5515d0cc2d1'
 
     Clause:
@@ -1074,8 +1075,8 @@ components:
               contractAddress:
                 type: string
                 description: |
-                    The address of the deployed contract, if the corresponding clause is a
-                    contract deployment clause.
+                  The address of the deployed contract, if the corresponding clause is a
+                  contract deployment clause.
                 example: '0x0000000000000000000000000000456e65726779'
               events:
                 type: array
@@ -1514,13 +1515,15 @@ components:
       properties:
         isTrunk:
           type: boolean
-          description: whether the block is on the trunk
+          description: Whether the block is trunk (true) or not (false)
+          example: true
 
     IsFinalized:
       properties:
         isFinalized:
           type: boolean
-          description: whether the block is finalized
+          description: Whether the block has been finalized (true) or not (false)
+          example: false
 
   parameters:
     GetAccountAddressInPath:
@@ -1540,9 +1543,9 @@ components:
       description: The address of the account/ contract
       required: true
       schema:
-          type: string
-          format: hex
-          pattern: '^(0x)?[0-9a-fA-F]{40}$'
+        type: string
+        format: hex
+        pattern: '^(0x)?[0-9a-fA-F]{40}$'
       example: '0x0000000000000000000000000000456E65726779'
 
     GetStorageAddressInPath:
@@ -1551,9 +1554,9 @@ components:
       description: The address of the account/ contract
       required: true
       schema:
-          type: string
-          format: hex
-          pattern: '^(0x)?[0-9a-fA-F]{40}$'
+        type: string
+        format: hex
+        pattern: '^(0x)?[0-9a-fA-F]{40}$'
       example: '0x93Ae8aab337E58A6978E166f8132F59652cA6C56'
 
     RawTxInQuery:
@@ -1568,7 +1571,7 @@ components:
     RevisionInQuery:
       name: revision
       in: query
-      description: Specify either a block number or ID. If omitted, the best block is assumed.
+      description: Specify either a block number or ID. If omitted, the `best` block is assumed.
       schema:
         type: string
         pattern: '^(0x)?([0-9a-fA-F]{64}|[0-9]+)$'
@@ -1577,7 +1580,13 @@ components:
       name: revision
       in: path
       description: |
-        block ID or number, or 'best' stands for latest block, or 'finalized' stands for finalized block
+
+        Revision can be one of:
+        - a block ID (hex string)
+        - a block number (integer)
+        - `best` stands for latest block
+        - `finalized` stands for the finalized block
+
       required: true
       schema:
         type: string
@@ -1646,7 +1655,9 @@ components:
       in: query
       required: false
       description: |
-        whether the returned block is expanded.
+        Whether the returned block is expanded. 
+        - `true` returns an array of transactions with the transaction details and outputs
+        - `false` returns an array of transaction IDs (hex strings)
       schema:
         type: boolean
       example: false
