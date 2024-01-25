@@ -12,10 +12,8 @@ info:
     url: https://www.gnu.org/licenses/lgpl-3.0.en.html
   version: 2.1.0
 servers:
-  - url: https://mainnet.vechain.org/
-    description: Main
-  - url: https://testnet.vechain.org/
-    description: Test
+  - url: /
+    description: Current Node
 tags:
   - name: Accounts
     description: |
@@ -740,6 +738,7 @@ paths:
 components:
   schemas:
     GetAccountResponse:
+      type: object
       properties:
         balance:
           type: string
@@ -765,6 +764,7 @@ components:
         hasCode: false
 
     ExecuteCodesRequest:
+      type: object
       allOf:
         - $ref: '#/components/schemas/ExtendedCallData'
         - $ref: '#/components/schemas/BatchCallData'
@@ -831,6 +831,7 @@ components:
           vmError: ""
 
     GetAccountCodeResponse:
+      type: object
       properties:
         code:
           type: string
@@ -843,6 +844,7 @@ components:
         code: '0x6060604052600080fd00a165627a7a72305820c23d3ae2dc86ad130561a2829d87c7cb8435365492bd1548eb7e7fc0f3632be90029'
 
     GetStorageResponse:
+      type: object
       properties:
         value:
           type: string
@@ -857,11 +859,16 @@ components:
     GetTxResponse:
       type: object
       oneOf:
-        - $ref: '#/components/schemas/Tx'
-        - $ref: '#/components/schemas/RawTx'
-      properties:
-        meta:
-          $ref: '#/components/schemas/TxMeta'
+        - allOf:
+            - $ref: '#/components/schemas/Tx'
+            - properties:
+                meta:
+                    $ref: '#/components/schemas/TxMeta'
+        - allOf:
+            - $ref: '#/components/schemas/RawTx'
+            - properties:
+                meta:
+                    $ref: '#/components/schemas/TxMeta'
       example:
         id: '0x4de71f2d588aa8a1ea00fe8312d92966da424d9939a511fc0be81e65fad52af8'
         chainTag: 1
@@ -881,39 +888,41 @@ components:
           blockTimestamp: 1523156271
 
     GetTxReceiptResponse:
+      type: object
       allOf:
         - $ref: '#/components/schemas/Receipt'
-      properties:
-        meta:
-          $ref: '#/components/schemas/ReceiptMeta'
+        - properties:
+            meta:
+              $ref: '#/components/schemas/ReceiptMeta'
 
     GetBlockResponse:
+      type: object
       allOf:
         - $ref: '#/components/schemas/Block'
         - $ref: '#/components/schemas/IsTrunk'
         - $ref: '#/components/schemas/IsFinalized'
-      oneOf:
-        - properties:
-            transactions:
-              description: An array of transaction IDs
-              type: array
-              required: true
-              nullable: false
-              minItems: 0
-              items:
-                type: string
-                example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
-        - properties:
-            transactions:
-              description: All included transactions, expanded, to include their receipts
-              type: array
-              required: true
-              nullable: false
-              minItems: 0
-              items:
-                allOf:
-                  - $ref: '#/components/schemas/Tx'
-                  - $ref: '#/components/schemas/Receipt'
+        - oneOf:
+            - properties:
+                transactions:
+                  description: An array of transaction IDs
+                  type: array
+                  required: true
+                  nullable: false
+                  minItems: 0
+                  items:
+                    type: string
+                    example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+            - properties:
+                transactions:
+                  description: All included transactions, expanded, to include their receipts
+                  type: array
+                  required: true
+                  nullable: false
+                  minItems: 0
+                  items:
+                    allOf:
+                      - $ref: '#/components/schemas/Tx'
+                      - $ref: '#/components/schemas/Receipt'
       example:
         number: 325324
         id: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
@@ -936,6 +945,7 @@ components:
           - '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
 
     EventLogFilterRequest:
+      type: object
       properties:
         range:
           $ref: '#/components/schemas/FilterRange'
@@ -968,11 +978,12 @@ components:
       items:
         allOf:
           - $ref: '#/components/schemas/Event'
-        properties:
-          meta:
-            $ref: '#/components/schemas/LogMeta'
+          - properties:
+              meta:
+                $ref: '#/components/schemas/LogMeta'
 
     TransferLogFilterRequest:
+      type: object
       properties:
         range:
           $ref: '#/components/schemas/FilterRange'
@@ -1003,11 +1014,12 @@ components:
       items:
         allOf:
           - $ref: '#/components/schemas/Transfer'
-        properties:
-          meta:
-            $ref: '#/components/schemas/LogMeta'
+          - properties:
+              meta:
+                $ref: '#/components/schemas/LogMeta'
 
     GetPeersResponse:
+      type: array
       minItems: 0
       nullable: false
       required: true
@@ -1015,124 +1027,124 @@ components:
         $ref: '#/components/schemas/PeerStats'
 
     SubscriptionBlockResponse:
+      type: object
       allOf:
         - $ref: '#/components/schemas/Block'
         - $ref: '#/components/schemas/Obsolete'
-      properties:
-        transactions:
-          description: "An array of transaction IDs associated with the block."
-          type: array
-          minItems: 0
-          nullable: false
-          required: true
-          items:
-            type: string
-            example:
-              - '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+        - properties:
+            transactions:
+              description: "An array of transaction IDs associated with the block."
+              type: array
+              minItems: 0
+              nullable: false
+              required: true
+              items:
+                type: string
+                example:
+                  - '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
 
     SubscriptionEventResponse:
+      type: object
       allOf:
         - $ref: '#/components/schemas/Event'
         - $ref: '#/components/schemas/Obsolete'
-      properties:
-        meta:
-          allOf:
-            - $ref: '#/components/schemas/LogMeta'
-          required: true
-          nullable: false
+        - properties:
+            meta:
+              $ref: '#/components/schemas/LogMeta'
 
     SubscriptionTransferResponse:
+      type: object
       allOf:
         - $ref: '#/components/schemas/Transfer'
         - $ref: '#/components/schemas/Obsolete'
-      properties:
-        meta:
-          allOf:
-            - $ref: '#/components/schemas/LogMeta'
-          required: true
-          nullable: false
+        - properties:
+            meta:
+              $ref: '#/components/schemas/LogMeta'
 
     SubscriptionBeat2Response:
+      type: object
       allOf:
         - $ref: '#/components/schemas/SubscriptionBeatResponse'
-      properties:
-        gasLimit:
-          type: integer
-          format: uint64
-          description: |
-            The gas limit of the block
-          example: 12000000
-          nullable: false
-          required: true
+        - properties:
+            gasLimit:
+              type: integer
+              format: uint64
+              description: |
+                The gas limit of the block
+              example: 12000000
+              nullable: false
+              required: true
 
     SubscriptionBeatResponse:
+      type: object
       allOf:
         - $ref: '#/components/schemas/Obsolete'
-      properties:
-        number:
-          type: integer
-          format: uint32
-          description: |
-            The block number (height)
-          example: 325324
-          required: true
-          nullable: false
-        id:
-          type: string
-          format: hex
-          description: |
-            The block identifier
-          example: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
-          required: true
-          nullable: false
-          pattern: '^0x[0-9a-f]{64}$'
-        parentID:
-          type: string
-          format: hex
-          description: |
-            The parent block identifier
-          example: '0x0004f6cb730dbd90fed09d165bfdf33cc0eed47ec068938f6ee7b7c12a4ea98d'
-          required: true
-          nullable: false
-          pattern: '^0x[0-9a-f]{64}$'
-        timestamp:
-          type: integer
-          format: uint64
-          description: |
-            The UNIX timestamp of the block
-          example: 1533267900
-          required: true
-          nullable: false
-        txsFeatures:
-          type: integer
-          format: uint32
-          description: |
-            The supported transaction features bitset
-          example: 0
-          required: true
-          nullable: false
-        bloom:
-          type: string
-          format: hex
-          description: |
-            A hexadecimal representation of the bloom filter composed with affected addresses & topics.
+        - properties:
+            number:
+              type: integer
+              format: uint32
+              description: |
+                The block number (height)
+              example: 325324
+              required: true
+              nullable: false
+            id:
+              type: string
+              format: hex
+              description: |
+                The block identifier
+              example: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
+              required: true
+              nullable: false
+              pattern: '^0x[0-9a-f]{64}$'
+            parentID:
+              type: string
+              format: hex
+              description: |
+                The parent block identifier
+              example: '0x0004f6cb730dbd90fed09d165bfdf33cc0eed47ec068938f6ee7b7c12a4ea98d'
+              required: true
+              nullable: false
+              pattern: '^0x[0-9a-f]{64}$'
+            timestamp:
+              type: integer
+              format: uint64
+              description: |
+                The UNIX timestamp of the block
+              example: 1533267900
+              required: true
+              nullable: false
+            txsFeatures:
+              type: integer
+              format: uint32
+              description: |
+                The supported transaction features bitset
+              example: 0
+              required: true
+              nullable: false
+            bloom:
+              type: string
+              format: hex
+              description: |
+                A hexadecimal representation of the bloom filter composed with affected addresses & topics.
 
-            The bloom filter is used to efficiently check whether an element is a member of a set,
-            providing a summary of affected addresses related to new blocks.
-          example: '0x0424c1ff47029280'
-          nullable: false
-          required: true
-          pattern: '^0x[0-9a-f]*$'
-        k:
-          type: integer
-          format: uint32
-          description: |
-            The number of hash functions for bloom filter
-          example: 13
-          nullable: false
-          required: true
+                The bloom filter is used to efficiently check whether an element is a member of a set,
+                providing a summary of affected addresses related to new blocks.
+              example: '0x0424c1ff47029280'
+              nullable: false
+              required: true
+              pattern: '^0x[0-9a-f]*$'
+            k:
+              type: integer
+              format: uint32
+              description: |
+                The number of hash functions for bloom filter
+              example: 13
+              nullable: false
+              required: true
 
     PostDebugTracerRequest:
+      type: object
       allOf:
         - $ref: '#/components/schemas/TracerOption'
         - $ref: '#/components/schemas/ClauseTracerOption'
@@ -1142,6 +1154,7 @@ components:
         config: {}
 
     PostDebugTracerCallRequest:
+      type: object
       allOf:
         - $ref: '#/components/schemas/TracerOption'
         - $ref: '#/components/schemas/CallData'
@@ -1159,6 +1172,7 @@ components:
         blockRef: "0x00000000851caf3c"
 
     TxMeta:
+      type: object
       description: Transaction metadata such as block number, block timestamp, etc.
       properties:
         blockID:
@@ -1189,6 +1203,7 @@ components:
         blockTimestamp: 1533267900
 
     ReceiptMeta:
+      type: object
       description: The transaction receipt metadata such as block number, block timestamp, etc.
       properties:
         blockID:
@@ -1236,6 +1251,7 @@ components:
         txOrigin: '0xdb4027477b2a8fe4c83c6dafe7f86678bb1b8a8d'
 
     LogMeta:
+      type: object
       description: The event or transfer log metadata such as block number, block timestamp, etc.
       properties:
         blockID:
@@ -1284,6 +1300,7 @@ components:
           nullable: false
 
     Block:
+      type: object
       properties:
         number:
           type: integer
@@ -1398,6 +1415,7 @@ components:
           pattern: '^0x[0-9a-f]{40}$'
 
     Clause:
+      type: object
       properties:
         to:
           type: string
@@ -1425,6 +1443,7 @@ components:
           pattern: '^0x[0-9a-f]*$'
 
     Tx:
+      type: object
       properties:
         id:
           type: string
@@ -1513,6 +1532,7 @@ components:
           required: true
 
     RawTx:
+      type: object
       properties:
         raw:
           type: string
@@ -1522,6 +1542,7 @@ components:
           example: '0xf901854a880104c9cf34b0f5701ef8e7f8e594058d4c951aa24ca012cef3408b259ac1c69d1258890254beb02d1dcc0000b8c469ff936b00000000000000000000000000000000000000000000000000000000ee6c7f95000000000000000000000000167f6cc1e67a615b51b5a2deaba6b9feca7069df000000000000000000000000000000000000000000000000000000000000136a00000000000000000000000000000000000000000000000254beb02d1dcc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080830469978084cb6b32c5c101b88272da83429a49a354f566dd8c85ba288a7c86d1d3161c0aad6a276a7c9f8e69c14df3d76f0d3442a4f4a2a13d016c32c45e82d5010f27386eeb384dee3d8390c0006adead8b8ce8823c583e1ac15facef8f1cc665a707ade82b3c956a53a2b24e0c03d80504bc4b276b5d067b72636d8e88d2ffc65528f868df2cadc716962978a000'
 
     Event:
+      type: object
       properties:
         address:
           type: string
@@ -1555,6 +1576,7 @@ components:
           pattern: '^0x[0-9a-f]*$'
 
     Transfer:
+      type: object
       properties:
         sender:
           type: string
@@ -1582,6 +1604,7 @@ components:
           pattern: '^0x[0-9a-f]*$'
 
     Receipt:
+      type: object
       properties:
         gasUsed:
           type: integer
@@ -1652,6 +1675,7 @@ components:
                   $ref: '#/components/schemas/Transfer'
 
     CallData:
+      type: object
       properties:
         value:
           type: string
@@ -1700,6 +1724,7 @@ components:
           pattern: '^0x[0-9a-f]{40}$'
 
     ExtendedCallData:
+      type: object
       properties:
         provedWork:
           type: string
@@ -1732,6 +1757,7 @@ components:
           nullable: true
 
     CallResult:
+      type: object
       properties:
         data:
           type: string
@@ -1782,6 +1808,7 @@ components:
           nullable: false
 
     BatchCallData:
+      type: object
       properties:
         clauses:
           type: array
@@ -1832,6 +1859,7 @@ components:
     FilterOptions:
       nullable: true
       required: false
+      type: object
       properties:
         offset:
           type: integer
@@ -1871,6 +1899,7 @@ components:
     FilterRange:
       nullable: true
       required: false
+      type: object
       properties:
         unit:
           type: string
@@ -1917,6 +1946,7 @@ components:
         This refers to the range from block 10 to block 1000.
 
     EventCriteria:
+      type: object
       properties:
         address:
           type: string
@@ -2002,6 +2032,7 @@ components:
         topic1: '0x0000000000000000000000006d95e6dca01d109882fe1726a2fb9865fa41e7aa'
 
     TransferCriteria:
+      type: object
       properties:
         txOrigin:
           description: |
@@ -2076,6 +2107,7 @@ components:
           required: true
 
     TXID:
+      type: object
       properties:
         id:
           type: string
@@ -2090,6 +2122,7 @@ components:
         id: '0x4de71f2d588aa8a1ea00fe8312d92966da424d9939a511fc0be81e65fad52af8'
 
     Obsolete:
+      type: object
       properties:
         obsolete:
           type: boolean
@@ -2102,6 +2135,7 @@ components:
         obsolete: false
 
     ClauseTracerOption:
+      type: object
       properties:
         target:
           type: string
@@ -2119,6 +2153,7 @@ components:
         target: '0x010709463c1f0c9aa66a31182fb36d1977d99bfb6526bae0564a0eac4006c31a/0/0'
 
     TracerOption:
+      type: object
       properties:
         name:
           type: string
@@ -2150,6 +2185,7 @@ components:
         config: {}
 
     StorageRangeOption:
+      type: object
       properties:
         address:
           type: string
@@ -2182,6 +2218,7 @@ components:
           pattern: '^0x[0-9a-fA-F]{64}/[0-9]+/[0-9]+$'
 
     StorageRange:
+      type: object
       properties:
         nextKey:
           type: string
@@ -2203,6 +2240,7 @@ components:
                 '0x00000000000000000000000000000000000000000000000000000000000000c8'
 
     IsTrunk:
+      type: object
       properties:
         isTrunk:
           type: boolean
@@ -2212,6 +2250,7 @@ components:
           nullable: false
 
     IsFinalized:
+      type: object
       properties:
         isFinalized:
           type: boolean
