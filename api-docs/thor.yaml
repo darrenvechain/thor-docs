@@ -12,8 +12,10 @@ info:
     url: https://www.gnu.org/licenses/lgpl-3.0.en.html
   version: 2.1.0
 servers:
-  - url: /
-    description: Current Node
+  - url: https://mainnet.vechain.org/
+    description: Main
+  - url: https://testnet.vechain.org/
+    description: Test
 tags:
   - name: Accounts
     description: |
