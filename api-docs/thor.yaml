@@ -715,7 +715,8 @@ paths:
         - Debug
       summary: Retrieve storage range
       description: |
-        of the account with given address
+        The endpoint retrieves storage entries related to a particular clause execution and contract address. This 
+        could be useful for inspecting or analyzing storage changes.
       requestBody:
         required: true
         content:
@@ -741,6 +742,7 @@ components:
   schemas:
     GetAccountResponse:
       type: object
+      title: GetAccountResponse
       properties:
         balance:
           type: string
@@ -767,6 +769,7 @@ components:
 
     ExecuteCodesRequest:
       type: object
+      title: ExecuteCodesRequest
       allOf:
         - $ref: '#/components/schemas/ExtendedCallData'
         - $ref: '#/components/schemas/BatchCallData'
@@ -794,6 +797,7 @@ components:
 
     ExecuteCodesResponse:
       type: array
+      title: ExecuteCodesResponse
       items:
         $ref: '#/components/schemas/CallResult'
       example:
@@ -834,6 +838,7 @@ components:
 
     GetAccountCodeResponse:
       type: object
+      title: GetAccountCodeResponse
       properties:
         code:
           type: string
@@ -847,6 +852,7 @@ components:
 
     GetStorageResponse:
       type: object
+      title: GetStorageResponse
       properties:
         value:
           type: string
@@ -854,23 +860,26 @@ components:
           example: '0x0000000000000000000000000000000000000000000000000000000000000001'
           nullable: false
           required: true
-          pattern: '^0x[0-9a-f]*$'
+          pattern: '^0x[0-9a-f]{64}$'
       example:
         value: '0x0000000000000000000000000000000000000000000000000000000000000001'
 
     GetTxResponse:
       type: object
+      title: GetTxResponse
       oneOf:
         - allOf:
             - $ref: '#/components/schemas/Tx'
             - properties:
                 meta:
                     $ref: '#/components/schemas/TxMeta'
+          title: GetTxResponse
         - allOf:
             - $ref: '#/components/schemas/RawTx'
             - properties:
                 meta:
                     $ref: '#/components/schemas/TxMeta'
+          title: GetRawTxResponse
       example:
         id: '0x4de71f2d588aa8a1ea00fe8312d92966da424d9939a511fc0be81e65fad52af8'
         chainTag: 1
@@ -891,6 +900,7 @@ components:
 
     GetTxReceiptResponse:
       type: object
+      title: GetTxReceiptResponse
       allOf:
         - $ref: '#/components/schemas/Receipt'
         - properties:
@@ -899,32 +909,12 @@ components:
 
     GetBlockResponse:
       type: object
-      allOf:
-        - $ref: '#/components/schemas/Block'
-        - $ref: '#/components/schemas/IsTrunk'
-        - $ref: '#/components/schemas/IsFinalized'
-        - oneOf:
-            - properties:
-                transactions:
-                  description: An array of transaction IDs
-                  type: array
-                  required: true
-                  nullable: false
-                  minItems: 0
-                  items:
-                    type: string
-                    example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
-            - properties:
-                transactions:
-                  description: All included transactions, expanded, to include their receipts
-                  type: array
-                  required: true
-                  nullable: false
-                  minItems: 0
-                  items:
-                    allOf:
-                      - $ref: '#/components/schemas/Tx'
-                      - $ref: '#/components/schemas/Receipt'
+      description: |
+        The response will contain information about the block identified by the provided `revision`.
+      title: GetBlockResponse
+      oneOf:
+        - $ref: '#/components/schemas/RegularBlockResponse'
+        - $ref: '#/components/schemas/ExpandedBlockResponse'
       example:
         number: 325324
         id: '0x0004f6cc88bb4626a92907718e82f255b8fa511453a78e8797eb8cea3393b215'
@@ -946,8 +936,52 @@ components:
         transactions:
           - '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
 
+    RegularBlockResponse:
+      title: RegularBlockResponse
+      type: object
+      description: |
+        The response will contain information about the block identified by the provided `revision`. The `transactions` 
+        field contains an array of transaction IDs.
+      allOf:
+        - $ref: '#/components/schemas/Block'
+        - $ref: '#/components/schemas/IsTrunk'
+        - $ref: '#/components/schemas/IsFinalized'
+        - properties:
+            transactions:
+              description: An array of transaction IDs
+              type: array
+              required: true
+              nullable: false
+              minItems: 0
+              items:
+                type: string
+                example: '0x284bba50ef777889ff1a367ed0b38d5e5626714477c40de38d71cedd6f9fa477'
+
+    ExpandedBlockResponse:
+        title: ExpandedBlockResponse
+        type: object
+        description: |
+            The response will contain information about the block identified by the provided `revision`. The `transactions` 
+            field contains an array of transactions, expanded to include their receipts.
+        allOf:
+            - $ref: '#/components/schemas/Block'
+            - $ref: '#/components/schemas/IsTrunk'
+            - $ref: '#/components/schemas/IsFinalized'
+            - properties:
+                transactions:
+                  description: All included transactions, expanded, to include their receipts
+                  type: array
+                  required: true
+                  nullable: false
+                  minItems: 0
+                  items:
+                    allOf:
+                      - $ref: '#/components/schemas/Tx'
+                      - $ref: '#/components/schemas/Receipt'
+
     EventLogFilterRequest:
       type: object
+      title: EventLogFilterRequest
       properties:
         range:
           $ref: '#/components/schemas/FilterRange'
@@ -974,6 +1008,7 @@ components:
 
     EventLogsResponse:
       type: array
+      title: EventLogsResponse
       minItems: 0
       nullable: false
       required: true
@@ -986,6 +1021,7 @@ components:
 
     TransferLogFilterRequest:
       type: object
+      title: TransferLogFilterRequest
       properties:
         range:
           $ref: '#/components/schemas/FilterRange'
@@ -1010,6 +1046,7 @@ components:
 
     TransferLogsResponse:
       type: array
+      title: TransferLogsResponse
       minItems: 0
       nullable: false
       required: true
@@ -1022,6 +1059,7 @@ components:
 
     GetPeersResponse:
       type: array
+      title: GetPeersResponse
       minItems: 0
       nullable: false
       required: true
@@ -1030,6 +1068,7 @@ components:
 
     SubscriptionBlockResponse:
       type: object
+      title: SubscriptionBlockResponse
       allOf:
         - $ref: '#/components/schemas/Block'
         - $ref: '#/components/schemas/Obsolete'
@@ -1047,6 +1086,7 @@ components:
 
     SubscriptionEventResponse:
       type: object
+      title: SubscriptionEventResponse
       allOf:
         - $ref: '#/components/schemas/Event'
         - $ref: '#/components/schemas/Obsolete'
@@ -1056,6 +1096,7 @@ components:
 
     SubscriptionTransferResponse:
       type: object
+      title: SubscriptionTransferResponse
       allOf:
         - $ref: '#/components/schemas/Transfer'
         - $ref: '#/components/schemas/Obsolete'
@@ -1065,6 +1106,7 @@ components:
 
     SubscriptionBeat2Response:
       type: object
+      title: SubscriptionBeat2Response
       allOf:
         - $ref: '#/components/schemas/SubscriptionBeatResponse'
         - properties:
@@ -1079,6 +1121,7 @@ components:
 
     SubscriptionBeatResponse:
       type: object
+      title: SubscriptionBeatResponse
       allOf:
         - $ref: '#/components/schemas/Obsolete'
         - properties:
@@ -1147,6 +1190,7 @@ components:
 
     PostDebugTracerRequest:
       type: object
+      title: PostDebugTracerRequest
       allOf:
         - $ref: '#/components/schemas/TracerOption'
         - $ref: '#/components/schemas/ClauseTracerOption'
@@ -1156,6 +1200,7 @@ components:
         config: {}
 
     PostDebugTracerCallRequest:
+      title: PostDebugTracerCallRequest
       type: object
       allOf:
         - $ref: '#/components/schemas/TracerOption'
@@ -1174,6 +1219,7 @@ components:
         blockRef: "0x00000000851caf3c"
 
     TxMeta:
+      title: TxMeta
       type: object
       description: Transaction metadata such as block number, block timestamp, etc.
       properties:
@@ -1205,6 +1251,7 @@ components:
         blockTimestamp: 1533267900
 
     ReceiptMeta:
+      title: ReceiptMeta
       type: object
       description: The transaction receipt metadata such as block number, block timestamp, etc.
       properties:
@@ -1253,6 +1300,7 @@ components:
         txOrigin: '0xdb4027477b2a8fe4c83c6dafe7f86678bb1b8a8d'
 
     LogMeta:
+      title: LogMeta
       type: object
       description: The event or transfer log metadata such as block number, block timestamp, etc.
       properties:
@@ -1302,6 +1350,7 @@ components:
           nullable: false
 
     Block:
+      title: Block
       type: object
       properties:
         number:
@@ -1417,6 +1466,7 @@ components:
           pattern: '^0x[0-9a-f]{40}$'
 
     Clause:
+      title: Clause
       type: object
       properties:
         to:
@@ -1445,6 +1495,7 @@ components:
           pattern: '^0x[0-9a-f]*$'
 
     Tx:
+      title: Tx
       type: object
       properties:
         id:
@@ -1521,6 +1572,7 @@ components:
           type: string
           format: hex
           description: The transaction ID that this transaction depends on.
+          pattern: '^0x[0-9a-f]{64}$'
           example: null
           required: true
           nullable: true
@@ -1529,21 +1581,24 @@ components:
           example: '0x29c257e36ea6e72a'
           description: |
             The transaction `nonce` is a 64-bit unsigned integer that is determined by the transaction sender.
-                    required: true
-          nullable: false
           required: true
+          nullable: false
 
     RawTx:
+      title: RawTx
       type: object
       properties:
         raw:
           type: string
+          format: hex
           description: The raw RLP encoded transaction.
           required: true
           nullable: false
+          pattern: '^0x[0-9a-f]*$'
           example: '0xf901854a880104c9cf34b0f5701ef8e7f8e594058d4c951aa24ca012cef3408b259ac1c69d1258890254beb02d1dcc0000b8c469ff936b00000000000000000000000000000000000000000000000000000000ee6c7f95000000000000000000000000167f6cc1e67a615b51b5a2deaba6b9feca7069df000000000000000000000000000000000000000000000000000000000000136a00000000000000000000000000000000000000000000000254beb02d1dcc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080830469978084cb6b32c5c101b88272da83429a49a354f566dd8c85ba288a7c86d1d3161c0aad6a276a7c9f8e69c14df3d76f0d3442a4f4a2a13d016c32c45e82d5010f27386eeb384dee3d8390c0006adead8b8ce8823c583e1ac15facef8f1cc665a707ade82b3c956a53a2b24e0c03d80504bc4b276b5d067b72636d8e88d2ffc65528f868df2cadc716962978a000'
 
     Event:
+      title: Event
       type: object
       properties:
         address:
@@ -1556,7 +1611,7 @@ components:
           pattern: '^0x[0-9a-f]{40}$'
         topics:
           type: array
-          minItems: 1
+          minItems: 0
           nullable: false
           required: true
           description: |
@@ -1578,6 +1633,7 @@ components:
           pattern: '^0x[0-9a-f]*$'
 
     Transfer:
+      title: Transfer
       type: object
       properties:
         sender:
@@ -1606,6 +1662,7 @@ components:
           pattern: '^0x[0-9a-f]*$'
 
     Receipt:
+      title: Receipt
       type: object
       properties:
         gasUsed:
@@ -1678,6 +1735,7 @@ components:
 
     CallData:
       type: object
+      title: CallData
       properties:
         value:
           type: string
@@ -1727,6 +1785,7 @@ components:
 
     ExtendedCallData:
       type: object
+      title: ExtendedCallData
       properties:
         provedWork:
           type: string
@@ -1760,6 +1819,7 @@ components:
 
     CallResult:
       type: object
+      title: CallResult
       properties:
         data:
           type: string
@@ -1811,6 +1871,7 @@ components:
 
     BatchCallData:
       type: object
+      title: BatchCallData
       properties:
         clauses:
           type: array
@@ -1852,6 +1913,7 @@ components:
         caller: '0x7567d83b7b8d80addcb281a71d54fc7b3364ffed'
 
     BatchCallResult:
+      title: BatchCallResult
       type: array
       minItems: 0
       nullable: false
@@ -1862,6 +1924,7 @@ components:
       nullable: true
       required: false
       type: object
+      title: FilterOptions
       properties:
         offset:
           type: integer
@@ -1902,6 +1965,7 @@ components:
       nullable: true
       required: false
       type: object
+      title: FilterRange
       properties:
         unit:
           type: string
@@ -1949,6 +2013,7 @@ components:
 
     EventCriteria:
       type: object
+      title: EventCriteria
       properties:
         address:
           type: string
@@ -2035,6 +2100,7 @@ components:
 
     TransferCriteria:
       type: object
+      title: TransferCriteria
       properties:
         txOrigin:
           description: |
@@ -2063,6 +2129,7 @@ components:
 
     PeerStats:
       type: object
+      title: PeerStats
       properties:
         name:
           type: string
@@ -2109,6 +2176,7 @@ components:
           required: true
 
     TXID:
+      title: TXID
       type: object
       properties:
         id:
@@ -2124,6 +2192,7 @@ components:
         id: '0x4de71f2d588aa8a1ea00fe8312d92966da424d9939a511fc0be81e65fad52af8'
 
     Obsolete:
+      title: Obsolete
       type: object
       properties:
         obsolete:
@@ -2137,6 +2206,7 @@ components:
         obsolete: false
 
     ClauseTracerOption:
+      title: ClauseTracerOption
       type: object
       properties:
         target:
@@ -2150,11 +2220,12 @@ components:
           example: '0x010709463c1f0c9aa66a31182fb36d1977d99bfb6526bae0564a0eac4006c31a/0/0'
           required: true
           nullable: false
-          pattern: '^0x[0-9a-fA-F]{64}/[0-9]+/[0-9]+$'
+          pattern: '^0x[0-9a-fA-F]{64}\/(0x[0-9a-fA-F]{64}|\d+)\/[0-9]+$'
       example:
         target: '0x010709463c1f0c9aa66a31182fb36d1977d99bfb6526bae0564a0eac4006c31a/0/0'
 
     TracerOption:
+      title: TracerOption
       type: object
       properties:
         name:
@@ -2188,6 +2259,7 @@ components:
 
     StorageRangeOption:
       type: object
+      title: StorageRangeOption
       properties:
         address:
           type: string
@@ -2215,12 +2287,18 @@ components:
         target:
           type: string
           example: '0x010709463c1f0c9aa66a31182fb36d1977d99bfb6526bae0564a0eac4006c31a/0/0'
+          description: |
+            The unified path of the transaction clause.
+            
+            Format:
+            `blockID/(txIndex|txId)/clauseIndex`
           required: true
           nullable: false
-          pattern: '^0x[0-9a-fA-F]{64}/[0-9]+/[0-9]+$'
+          pattern: '^0x[0-9a-fA-F]{64}\/(0x[0-9a-fA-F]{64}|\d+)\/[0-9]+$'
 
     StorageRange:
       type: object
+      title: StorageRange
       properties:
         nextKey:
           type: string
@@ -2242,6 +2320,7 @@ components:
                 '0x00000000000000000000000000000000000000000000000000000000000000c8'
 
     IsTrunk:
+      title: IsTrunk
       type: object
       properties:
         isTrunk:
@@ -2252,6 +2331,7 @@ components:
           nullable: false
 
     IsFinalized:
+      title: IsFinalized
       type: object
       properties:
         isFinalized:
@@ -2296,10 +2376,9 @@ components:
     RevisionInQuery:
       name: revision
       in: query
-      description: Specify either a block number or ID. If omitted, the `best` block is assumed.
+      description: Specify either `best`, a block number or block ID. If omitted, the `best` block is assumed.
       schema:
         type: string
-        pattern: '^(0x)?([0-9a-fA-F]{64}|[0-9]+)$'
 
     RevisionInPath:
       name: revision
@@ -2363,7 +2442,7 @@ components:
       description: |
         A saved block ID for resuming the subscription. If omitted, the best block ID is assumed.
         
-        **Note**: If the provided position is too far behind the best block, a 403 error will be thrown. The allowable difference depends on the configuration of each the node.
+        **Note**: If the provided position is too far behind the best block, a 403 error will be thrown. The allowable difference depends on the configuration of each node.
         
         See the argument `api-backtrace-limit` when starting a node.
       schema:
